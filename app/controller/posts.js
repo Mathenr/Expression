@@ -1,39 +1,108 @@
 let database = require('../models/database');
+let User = require('../models/users.js');
+let Post = require('../models/posts.js');
 
 module.exports.getPosts = function(req, res) {
-    res.json(database.posts);
+
+    let promise = Post.find().exec();
+    promise.then(
+        function(posts) {
+            res.json(posts);
+        },
+        function(e) {
+            res.status(500).json(e);
+        }
+    );
 }
 
 module.exports.getPostDetails = function(req, res) {
-    let id = req.params.id;
-    let post = database.posts.find(post => (post._id == id));
 
-    if (post) {
-        res.json(post);
-    } else {
-        res.status(404).send('Post não encontrado');
-    }
+    let id = req.params.id;
+    let promise = Post.findOne(
+        {
+            _id: id
+        }).exec();
+
+    promise.then(
+        function(user) {
+            res.json(user);
+        },
+        function(e) {
+            res.status(500).json(e);
+        }
+    );
 }
 
 module.exports.getPoster = function(req, res) {
-    post = database.posts.find(post => post._id == req.params.id);
-    user = database.users.find(i => i._id == post.uid);
-    res.json(user);
+
+    let id = req.params.id;
+
+    let promise = Post.findOne(
+        {
+            _id: id
+        }).exec();
+
+    promise.then(
+        function(user) {
+
+            let promise = User.findOne({
+                _id: user.uid
+            }).exec();
+
+            promise.then(
+                function(users) {
+                    res.json(users);
+                },
+                function(e) {
+                    res.status(500).json(e);
+                }
+            );
+        },
+        function(e) {
+            res.status(500).json(e);
+        }
+    );
 }
 
 module.exports.setPost = function(req, res){
-    database.posts.push(req.body);
-    res.status(200).send(req.body);
+
+    let promise = Post.create(req.body);
+    promise.then(
+        function(c) {
+            res.status(201).json(c);
+        },
+        function(e) {
+            res.status(500).json(e);
+        }
+    );
 }
 
 module.exports.updatePost = function(req, res) {
-    index = database.posts.findIndex(i => i._id == req.body._id);
-    database.posts[index] = req.body;
-    res.status(200).send(req.body);
+
+    let id = req.params.id;
+    let promise = Post.findByIdAndUpdate(id, req.body).exec();
+    
+    promise.then(
+        function(c) {
+            res.status(201).json("Atualizado com sucesso!");
+        },
+        function(e) {
+            res.status(500).json(e);
+        }
+    );
 }
 
 module.exports.deletePost = function(req, res) {
-    index = database.posts.findIndex(i => i._id == req.body._id);
-    database.posts.splice(index, 1);
-    res.status(200).send(req.body);
+
+    let id = req.params.id;
+    let promise = Post.findByIdAndRemove(id).exec();
+    
+    promise.then(
+        function(c) {
+            res.status(201).json("Deletado com sucesso!");
+        },
+        function(e) {
+            res.status(500).json(e);
+        }
+    );
 }
