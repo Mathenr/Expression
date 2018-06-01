@@ -1,6 +1,8 @@
 let database = require('../models/database');
 let User = require('../models/users.js');
 let Post = require('../models/posts.js');
+let bcrypt = require('bcrypt');
+let jwt = require('jsonwebtoken');
 
 module.exports.getUsers = function(req, res) {
 
@@ -13,8 +15,6 @@ module.exports.getUsers = function(req, res) {
             res.status(500).json(e);
         }
     );
-
-    // res.json(database.users);
 }
 
 module.exports.getUserDetails = function(req, res) {
@@ -33,16 +33,6 @@ module.exports.getUserDetails = function(req, res) {
             res.status(500).json(e);
         }
     );
-
-    /*
-    let id = req.params.id;
-    let user = database.users.find(user => (user._id == id));
-
-    if (user) {
-            res.json(user);
-    } else {
-            res.status(404).send('Usuário não encontrado');
-    } */
 }
 
 module.exports.getUserPosts = function(req, res) {
@@ -64,56 +54,60 @@ module.exports.getUserPosts = function(req, res) {
 
 module.exports.setUser = function(req, res){
 
-    let promise = User.create(req.body);
+    let newUser = new User({
+        _id: req.body._id,
+        name: req.body.name,
+        email: req.body.email,
+        senha: bcrypt.hashSync(req.body.senha, 5)
+    })
+
+    let promise = User.create(newUser);
     promise.then(
         function(c) {
-            res.status(201).json(c);
+            res.status(201).json("Usuário registrado com sucesso. Id: " + c._id);
         },
         function(e) {
             res.status(500).json(e);
         }
     );
-
-    /* database.users.push(req.body);
-    res.status(200).send(req.body._id); */
 }
 
 module.exports.updateUser = function(req, res) {
 
     let id = req.params.id;
-    let promise = User.findByIdAndUpdate(id, req.body).exec();
-    
-    promise.then(
-        function(c) {
-            res.status(201).json("Atualizado com sucesso!");
-        },
-        function(e) {
-            res.status(500).json(e);
-        }
-    );
 
-    /* index = database.users.findIndex(i => i._id == req.body._id);
-    database.users[index] = req.body;
-    res.status(200).send(req.body);
-    */
+    if (jwt.decode(req.query.token).id == id) {
+        let promise = User.findByIdAndUpdate(id, req.body).exec();
+    
+        promise.then(
+            function(c) {
+                res.status(201).json("Atualizado com sucesso!");
+            },
+            function(e) {
+                res.status(500).json(e);
+            }
+        );
+    } else {
+        res.status(500).json("Você não tem autorização para realizar esse procedimento")
+    }
 }
 
 module.exports.deleteUser = function(req, res) {
 
     let id = req.params.id;
-    let promise = User.findByIdAndRemove(id).exec();
-    
-    promise.then(
-        function(c) {
-            res.status(201).json("Deletado com sucesso!");
-        },
-        function(e) {
-            res.status(500).json(e);
-        }
-    );
-    /* 
-    index = database.users.findIndex(i => i._id == req.body._id);
-    database.users.splice(index, 1);
-    res.status(200).send(req.body);
-    */
+
+    if (jwt.decode(req.query.token).id == id) {
+        let promise = User.findByIdAndRemove(id).exec();
+        
+        promise.then(
+            function(c) {
+                res.status(201).json("Usuário deletado com sucesso.");
+            },
+            function(e) {
+                res.status(500).json(e);
+            }
+        );
+    } else {
+        res.status(500).json("Você não tem autorização para realizar esse procedimento")
+    }
 }

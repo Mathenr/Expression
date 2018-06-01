@@ -1,6 +1,7 @@
 let database = require('../models/database');
 let User = require('../models/users.js');
 let Post = require('../models/posts.js');
+let jwt = require('jsonwebtoken');
 
 module.exports.getPosts = function(req, res) {
 
@@ -66,7 +67,14 @@ module.exports.getPoster = function(req, res) {
 
 module.exports.setPost = function(req, res){
 
-    let promise = Post.create(req.body);
+    let newPost = new Post({
+        _id: req.body._id,
+        text: req.body.text,
+        likes: req.body.likes,
+        uid: jwt.decode(req.query.token).id
+    })
+
+    let promise = Post.create(newPost);
     promise.then(
         function(c) {
             res.status(201).json(c);
@@ -80,14 +88,24 @@ module.exports.setPost = function(req, res){
 module.exports.updatePost = function(req, res) {
 
     let id = req.params.id;
+    let post = Post.findOne({_id: id}).exec();
     let promise = Post.findByIdAndUpdate(id, req.body).exec();
-    
-    promise.then(
+
+    post.then(
         function(c) {
-            res.status(201).json("Atualizado com sucesso!");
-        },
-        function(e) {
-            res.status(500).json(e);
+            let uid = c.uid
+            if (jwt.decode(req.query.token).id == uid) {
+                promise.then(
+                    function(f) {
+                        res.status(201).json("Atualizado com sucesso");
+                    },
+                    function(e) {
+                        res.status(500).json("Erro:" + e);
+                    }
+                );
+            } else {
+                res.status(500).json("Você não tem autorização para realizar esse procedimento")
+            } 
         }
     );
 }
@@ -95,14 +113,24 @@ module.exports.updatePost = function(req, res) {
 module.exports.deletePost = function(req, res) {
 
     let id = req.params.id;
+    let post = Post.findOne({_id: id}).exec();
     let promise = Post.findByIdAndRemove(id).exec();
-    
-    promise.then(
+
+    post.then(
         function(c) {
-            res.status(201).json("Deletado com sucesso!");
-        },
-        function(e) {
-            res.status(500).json(e);
+            let uid = c.uid
+            if (jwt.decode(req.query.token).id == uid) {
+                promise.then(
+                    function(f) {
+                        res.status(201).json("Deletado com sucesso!");
+                    },
+                    function(e) {
+                        res.status(500).json("Erro:" + e);
+                    }
+                );
+            } else {
+                res.status(500).json("Você não tem autorização para realizar esse procedimento")
+            } 
         }
     );
 }
